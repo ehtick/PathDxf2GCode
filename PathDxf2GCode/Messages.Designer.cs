@@ -596,6 +596,15 @@ namespace de.hmmueller.PathDxf2GCode {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die ZProbe not attached to segment ähnelt.
+        /// </summary>
+        internal static string PathModel_ZProbeNotAttached {
+            get {
+                return ResourceManager.GetString("PathModel_ZProbeNotAttached", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Nesting depth deeper than 9 levels at path {0} ähnelt.
         /// </summary>
         internal static string PathSegment_CallDepthGt9_Path {

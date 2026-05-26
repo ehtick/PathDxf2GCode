@@ -13,6 +13,7 @@ public interface IMillGeometry {
                       List<GCode> gcodes, double fromZ_mm, double toZ_mm,
                       double th_mm, double f_mmpmin, bool backtracking);
     IMillGeometry Section(double from_mm, double lg_mm);
+    bool Contains(Vector2 p);
 }
 
 public class LineGeometry : IMillGeometry {
@@ -54,6 +55,9 @@ public class LineGeometry : IMillGeometry {
 
     public IMillGeometry Section(double from_mm, double lg_mm)
         => new LineGeometry(At(from_mm), At(from_mm + lg_mm));
+
+    public bool Contains(Vector2 p) 
+        => MathHelper.PointInSegment(p, Start, End) == 0;
 }
 
 public class ArcGeometry : IMillGeometry {
@@ -116,6 +120,9 @@ public class ArcGeometry : IMillGeometry {
 
     public IMillGeometry Section(double from_mm, double lg_mm)
         => new ArcGeometry(Center, Radius_mm, AngleAt_deg(from_mm), AngleAt_deg(from_mm + lg_mm), Counterclockwise);
+
+    public bool Contains(Vector2 p)
+        => GeometryHelpers.PointInArc(p, Center, Radius_mm, StartAngle_deg, EndAngle_deg);
 }
 
 public static class MillGeometryHelper {

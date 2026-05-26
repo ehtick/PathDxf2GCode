@@ -6,31 +6,54 @@ using netDxf.Entities;
 using System.Text.RegularExpressions;
 
 public class ZProbe {
-    public Circle Source { get; }
-    public ParamsText ParamsText { get; }
+    private readonly Vector2 _start, _end;
+
+    private Vector2? _probe;
+    private double _segmentTH_mm;
     private ZProbeParams? _params;
     private string? _name;
 
-    public Vector2 Center { get; }
+    public EntityObject Source { get; }
+    public Vector2 Position => _start;
+    public Vector2 Probe => _probe!.Value;
+    public ParamsText ParamsText { get; }
+    public bool Disabled { get; private set; }
 
-    public ZProbe(Circle source, ParamsText paramsText, Vector2 center) {
-        Center = center;
+    public ZProbe(Vector2 start, Vector2 end, EntityObject source, ParamsText paramsText) {
+        _start = start;
+        _end = end;
         Source = source;
         ParamsText = paramsText;
     }
 
-    public void CreateParams(PathParams pathParams, ActualVariables superpathVariables, string dxfFileName, Action<string, string> onError) {
-        _params = new ZProbeParams(ParamsText, superpathVariables, MessageHandlerForEntities.Context(Source, Center, dxfFileName), pathParams, onError);
+    public void TryAttachTo(ILeafSegmentWithTForZProbes segment) {
+        if (segment.Contains(_start)) {
+            _probe = _end;
+            _segmentTH_mm = segment.TH_mm;
+            Disabled = segment.Disabled;
+        } else if (segment.Contains(_end)) {
+            _probe = _start;
+            _segmentTH_mm = segment.TH_mm;
+            Disabled = segment.Disabled;
+        } else {
+            // ignore
+        }
     }
 
-    public double TH_mm(double h_mm) => _params!.T_mm + _params.H_mm + h_mm;
+    public bool IsAttached => _probe != null;
+
+    public void CreateParams(PathParams pathParams, ActualVariables superpathVariables, string dxfFileName, Action<string, string> onError) {
+        _params = new ZProbeParams(ParamsText, superpathVariables, MessageHandlerForEntities.Context(Source, Position, dxfFileName), pathParams, onError);
+    }
+
+    public double TH_mm(double h_mm) => (_params!.RawT_mm + _params!.H_mm ?? _segmentTH_mm) + _params.H_mm + h_mm;
     public string? L => _params!.L;
 
     public string Name => _name ?? throw new NullReferenceException("SetName was not called");
 
     public Vector3 EmitGCode(Vector3 currPos, double h_mm, Vector2 transformedCenter,
                              List<GCode> gcodes, string dxfFileName, MessageHandlerForEntities messages) {
-        PathSegment.AssertNear(currPos.XY(), transformedCenter, MessageHandlerForEntities.Context(Source, Center, dxfFileName));
+        PathSegment.AssertNear(currPos.XY(), transformedCenter, MessageHandlerForEntities.Context(Source, Probe, dxfFileName));
 
         double o_mm = _params!.O_mm;
         gcodes.AddNonhorizontalG00($"G00 Z{(TH_mm(h_mm) + o_mm).F3()}", currPos.Z - TH_mm(h_mm) - o_mm); // Go down quickly to T+O

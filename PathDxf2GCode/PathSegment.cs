@@ -275,10 +275,16 @@ public class MillChain : PathSegment {
 }
 
 public interface ILeafSegment {
-    // Marker interface
 }
 
-public class ChainSegment : ILeafSegment {
+public interface ILeafSegmentWithTForZProbes : ILeafSegment {
+    EntityObject Source { get; }
+    double TH_mm { get; }
+    bool Contains(Vector2 p);
+    bool Disabled { get; }
+}
+
+public class ChainSegment : ILeafSegmentWithTForZProbes {
     protected RawSegment Raw { get; }
 
     public class RawSegment : IRawSegment {
@@ -317,7 +323,6 @@ public class ChainSegment : ILeafSegment {
     public double Bottom_mm
         => MillType == MillType.Mark ? _params!.D_mm : _params!.B_mm;
 
-
     public Vector2 Start => Raw.Start;
     public Vector2 End => Raw.End;
     public MillType MillType => Raw.MillType;
@@ -325,6 +330,9 @@ public class ChainSegment : ILeafSegment {
     public ParamsText ParamsText => Raw.ParamsText;
     private IMillGeometry Geometry => Raw.Geometry;
     public double Order => Raw.Order;
+
+    public double TH_mm => _params!.T_mm;
+    public bool Disabled => false;
 
     internal void CreateParams(ChainParams chainParams, ActualVariables superpathVariables, string dxfFileName, Action<string, string> onError) {
         _params = new MillParams(ParamsText, superpathVariables, MillType, MessageHandlerForEntities.Context(Source, Start, dxfFileName), chainParams, onError);
@@ -335,6 +343,8 @@ public class ChainSegment : ILeafSegment {
             ? Geometry.CreateSupportBarGeometries(_params.O_mm, _params.P_mm, _params.U_mm, _params.D_mm - _params.B_mm)
             : [];
     }
+
+    public bool Contains(Vector2 p) => Raw.Geometry.Contains(p);
 
     internal Vector3 EmitGCode(Vector3 currPos, double millingLayer_mm, bool start2End, double h_mm, double globalS_mm,
                                 Transformation3 t, List<GCode> gcodes, string dxfFileName) {
@@ -371,7 +381,6 @@ public class SweepSegment : PathSegmentWithParamsText<SweepSegment.RawSegment, I
             (_start, _end) = (_end, _start);
         }
 
-
         public RawSegment(EntityObject source, ParamsText pars, Vector2 start, Vector2 end, double order) : base(source, pars) {
             Order = order;
             _start = start;
@@ -394,21 +403,29 @@ public class SweepSegment : PathSegmentWithParamsText<SweepSegment.RawSegment, I
     public override Vector3 EmitGCode(Vector3 currPos, double h_mm, Transformation3 t,
                                       double globalS_mm, List<GCode> gcodes, string dxfFileName, MessageHandlerForEntities messages) {
         AssertNear(currPos.XY(), t.Transform(Start), MessageHandlerForEntities.Context(Source, Start, dxfFileName));
+        return EmitGCodeForSweep(currPos, h_mm, t, globalS_mm, gcodes, Raw.Order == PathModel.BACKTRACK_ORDER, End, _params!);
+    }
 
-        Vector2 target = t.Transform(End);
-        double s_mm = h_mm + _params!.S_mm;
+    public static Vector3 EmitGCodeForSweep(Vector3 currPos, double h_mm, Transformation3 t, double globalS_mm, List<GCode> gcodes, bool backtracking, Vector2 end, IParams pars) {
+
+        Vector2 target = t.Transform(end);
+        double s_mm = h_mm + pars.S_mm;
         Vector3 target3 = target.AsVector3(s_mm);
-        GCodeHelpers.SweepAndDrillSafelyFromTo(currPos, target3, th_mm: h_mm + _params!.T_mm,
-                                               s_mm: s_mm, globalS_mm: globalS_mm, f_mmpmin: _params!.F_mmpmin,
-                                               backtracking: Raw.Order == PathModel.BACKTRACK_ORDER, t, gcodes);
+        GCodeHelpers.SweepAndDrillSafelyFromTo(currPos, target3, th_mm: h_mm + pars.T_mm,
+                                               s_mm: s_mm, globalS_mm: globalS_mm, f_mmpmin: pars.F_mmpmin,
+                                               backtracking, t, gcodes);
         return target3;
     }
 }
 
 public abstract class MarkOrMillPathSegment<TRawSegment, TParams>
-        : PathSegmentWithParamsText<TRawSegment, TParams>, ILeafSegment
+        : PathSegmentWithParamsText<TRawSegment, TParams>, ILeafSegmentWithTForZProbes
         where TRawSegment : MarkOrMillPathSegment<TRawSegment, TParams>.RawSegment
         where TParams : IParams {
+    public abstract bool Contains(Vector2 p);
+    public abstract double TH_mm { get; }
+    public bool Disabled => false;
+
     public new abstract class RawSegment : PathSegmentWithParamsText<TRawSegment, TParams>.RawSegment {
         protected RawSegment(EntityObject source, ParamsText paramsText, bool isMark) : base(source, paramsText) {
             IsMark = isMark;
@@ -474,6 +491,9 @@ public class HelixSegment : MarkOrMillPathSegment<HelixSegment.RawSegment, Helix
             ? fullArc.CreateSupportBarGeometries(_params.O_mm, _params.P_mm, _params.U_mm, _params.D_mm - _params.B_mm)
             : [];
     }
+
+    public override bool Contains(Vector2 p) => Center.Near(p);
+    public override double TH_mm => _params!.T_mm;
 
     public override Vector3 EmitGCode(Vector3 currPos, double h_mm, Transformation3 t,
         double globalS_mm, List<GCode> gcodes, string dxfFileName, MessageHandlerForEntities messages) {
@@ -578,6 +598,9 @@ public class DrillSegment : MarkOrMillPathSegment<DrillSegment.RawSegment, Drill
         _params = new DrillParams(ParamsText, superpathVariables, IsMark, MessageHandlerForEntities.Context(Source, Center, dxfFileName), pathParams, onError);
     }
 
+    public override bool Contains(Vector2 p) => Center.Near(p);
+    public override double TH_mm => _params!.T_mm;
+
     public override Vector3 EmitGCode(Vector3 currPos, double h_mm, Transformation3 t, double globalS_mm, List<GCode> gcodes, string dxfFileName, MessageHandlerForEntities messages) {
         Vector2 c = t.Transform(Center);
         AssertNear(currPos.XY(), c, MessageHandlerForEntities.Context(Source, Center, dxfFileName));
@@ -590,7 +613,7 @@ public class DrillSegment : MarkOrMillPathSegment<DrillSegment.RawSegment, Drill
     }
 }
 
-public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegment, SubpathParams>, ILeafSegment {
+public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegment, SubpathParams>, ILeafSegmentWithTForZProbes {
     public new class RawSegment : PathSegmentWithParamsText<RawSegment, SubpathParams>.RawSegment, IRawSegment {
         public int Preference => 3;
 
@@ -602,14 +625,16 @@ public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegmen
         public override Vector2 Start => _start;
         public override Vector2 End => _end;
         public double Order { get; }
+        public bool Disabled { get; }
 
         public RawSegment(EntityObject source, ParamsText text, Vector2 start, Vector2 end, Options options,
-            double order, PathModel.Collection models, string dxfFilePath) : base(source, text) {
+            double order, bool disabled, PathModel.Collection models, string dxfFilePath) : base(source, text) {
             _start = start;
             _end = end;
             Models = models;
             Options = options;
             Order = order;
+            Disabled = disabled;
         }
 
         public void Reverse() {
@@ -629,6 +654,8 @@ public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegmen
 
     public double H_mm => _params!.H_mm;
     public double T_mm => _params!.T_mm;
+    public double TH_mm => T_mm + H_mm;
+    public bool Disabled => Raw.Disabled;
 
     public string TargetName => _params!.GetString('>') ?? "<missing>";
 
@@ -692,7 +719,9 @@ public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegmen
 
     public override Vector3 EmitGCode(Vector3 currPos, double h_mm, Transformation3 t,
         double globalS_mm, List<GCode> gcodes, string dxfFileName, MessageHandlerForEntities messages) {
-        if (_targetModel != null) {
+        if (Raw.Disabled) {
+            currPos = SweepSegment.EmitGCodeForSweep(currPos, h_mm, t, globalS_mm, gcodes, Raw.Order == PathModel.BACKTRACK_ORDER, End, _params!);
+        } else if (_targetModel != null) {
             PathName name = _targetModel.Name;
             Transformation3 compound = t.Transform3(new Transformation2(_targetModel!.Start, _targetModel.End, Start, End));
             gcodes.AddComment($"START Subpath {name} t={compound}", 2);
@@ -706,4 +735,9 @@ public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegmen
         Transformation2 compound = t.Transform(new Transformation2(_targetModel!.Start, _targetModel.End, Start, End));
         return _targetModel?.CollectZProbes(compound, h_mm) ?? Enumerable.Empty<(ZProbe, Vector2, double)>();
     }
+
+    public bool Contains(Vector2 p) 
+        => Raw.Source is Arc a ? GeometryHelpers.PointInArc(p, a.Center.AsVector2(), a.Radius, a.StartAngle, a.EndAngle)
+         : Raw.Source is Line ? MathHelper.PointInSegment(p, Raw.Start, Raw.End) == 0 
+         : false;
 }

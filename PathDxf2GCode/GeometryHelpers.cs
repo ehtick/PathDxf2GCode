@@ -49,7 +49,7 @@ public static class GeometryHelpers {
     public static bool AngleIsInArc(this double angle, double startAngle, double endAngle)
         => startAngle < endAngle
             ? angle.Between(startAngle, endAngle)
-            : angle >= startAngle || angle <= endAngle;
+            : angle.Ge(startAngle) || angle.Le(endAngle);
 
     #endregion
 
@@ -92,6 +92,10 @@ public static class GeometryHelpers {
         bool projIsInArc = Vector2.Angle(arcCenter2p).AngleIsInArc(arcStartAngle_rad, arcEndAngle_rad);
         return projIsInArc ? (projOfPToArc - p).Modulus() : double.PositiveInfinity;
     }
+
+    public static bool PointInArc(Vector2 p, Vector2 center, double radius_mm, double startAngle_deg, double endAngle_deg)
+        => center.Distance(p).Near(radius_mm) && AngleIsInArc(Vector2.Angle(p - center) * MathHelper.RadToDeg, startAngle_deg, endAngle_deg);    
+
     #endregion
 
     #region Vector3

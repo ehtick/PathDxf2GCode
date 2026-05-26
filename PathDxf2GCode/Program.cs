@@ -4,7 +4,7 @@ using de.hmmueller.PathGCodeLibrary;
 using netDxf;
 
 public class Program {
-    public const string VERSION = "2026-05-17";
+    public const string VERSION = "2026-05-26";
 
     public static int Main(string[] args) {
         var messages = new MessageHandlerForEntities(Console.Error);
@@ -213,7 +213,7 @@ public class Program {
                 // Line example - separators are # and =:
                 // ([77.038 191.859]/L:ZA/T=5.000) #51=
                 // <        0             > <  1  > <> < 3 >
-                sw.WriteLine((z.Center.F3() + (z.L == null ? "" : "/L:" + z.L) + "/T=" + z.TH_mm(zc.H_mm).F3()).AsComment(0) + " " + z.Name + "=");
+                sw.WriteLine((z.Probe.F3() + (z.L == null ? "" : "/L:" + z.L) + "/T=" + z.TH_mm(zc.H_mm).F3()).AsComment(0) + " " + z.Name + "=");
             }
         }
     }

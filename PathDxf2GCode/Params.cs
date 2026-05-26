@@ -430,10 +430,10 @@ public class SubpathParams : AbstractChildParams {
 public class ZProbeParams : AbstractChildParams {
     private SubpathParams? _subpathParams;
 
-    public override double T_mm => GetDouble('T') ?? base.T_mm;
+    public double? RawT_mm => GetDouble('T');
     public string? L => GetString('L');
     public override double Z_mmpmin => GetDouble('Z') ?? base.Z_mmpmin;
-    public double H_mm => GetDouble('H') ?? _subpathParams?.H_mm ?? 0;
+    public double H_mm => GetDouble('H') ?? 0;
 
 
     public ZProbeParams(ParamsText text, ActualVariables superpathVariables, string errorContext, IParams pathParams,

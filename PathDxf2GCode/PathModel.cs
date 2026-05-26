@@ -174,8 +174,10 @@ public class PathModel {
         // Special circles:
         // Circle with 1mm diameter and line type __ _ _ __ (PHANTOM) = Path start
         // Circle with 2mm diameter and line type __ _ _ __ (PHANTOM) = Path end
-        // Circle with 6mm diameter and line type __ _ _ __ (PHANTOM) = ZProbe
-        // Circle with 6mm diameter and line type ......... (DOT) = Ignore
+
+        // Special lines:
+        // PHANTOM:    __ _ _ __   = ZProbe
+
         Dictionary<PathName, RawPathModel> name2Model = new();
         Dictionary<EntityObject, ParamsText> texts = new();
 
@@ -212,7 +214,6 @@ public class PathModel {
         bool IsSpecialCircle(Circle c) => IsLineTypePhantom(c) || IsLineTypeIgnore(c) || IsLineTypeDashdot(c);
         bool IsStartMarker(Circle c) => IsLineTypePhantom(c) && c.Radius.Near(0.5);
         bool IsEndMarker(Circle c) => IsLineTypePhantom(c) && c.Radius.Near(1);
-        bool IsZProbe(Circle c) => (IsLineTypePhantom(c) || IsLineTypeDashdot(c)) && c.Radius.Near(3);
         bool IsIgnoredZProbe(Circle c) => IsLineTypeIgnore(c) && c.Radius.Near(3);
 
         // Algorithm:
@@ -288,8 +289,6 @@ public class PathModel {
                     } else {
                         rawModel.End = center;
                     }
-                } else if (IsZProbe(circle)) { // ZProbe
-                    rawModel.ZProbes.Add(new ZProbe(circle, circleText, center));
                 } else if (IsIgnoredZProbe(circle)) { // ignored ZProbe
                     // ignore it
                 } else {
@@ -349,19 +348,22 @@ public class PathModel {
             if (millType.HasValue) {
                 rawModel.RawSegments.Add(new ChainSegment.RawSegment(geometry, millType.Value, lineOrArc, text, order));
             } else if (IsLineType(layerLinetypes, lineOrArc, "DASHDOT")) { // Subpath
-                var s = new SubPathSegment.RawSegment(lineOrArc, text, start, end, options, order, subPathDefs, dxfFilePath);
+                var s = new SubPathSegment.RawSegment(lineOrArc, text, start, end, options, order, disabled: false, subPathDefs, dxfFilePath);
                 rawModel.RawSegments.Add(s);
                 subPaths.Add(s);
+            } else if (IsLineType(layerLinetypes, lineOrArc, "DOT")) { // disabled Subpath
+                var s = new SubPathSegment.RawSegment(lineOrArc, text, start, end, options, order, disabled: true, subPathDefs, dxfFilePath);
+                rawModel.RawSegments.Add(s);
             } else if (IsLineType(layerLinetypes, lineOrArc, "DASHED")) { // Sweep with params
                 rawModel.RawSegments.Add(new SweepSegment.RawSegment(lineOrArc, text, start, end, order));
-            } else if (IsLineType(layerLinetypes, lineOrArc, "HIDDEN")
-                || IsLineType(layerLinetypes, lineOrArc, "DOT")) { // Sweep without params
+            } else if (IsLineType(layerLinetypes, lineOrArc, "HIDDEN")) { // Sweep without params
                 rawModel.RawSegments.Add(new SweepSegment.RawSegment(lineOrArc, ParamsText.EMPTY, start, end, order));
+            } else if (IsLineType(layerLinetypes, lineOrArc, "PHANTOM")) { // ZProbe
+                rawModel.ZProbes.Add(new ZProbe(start, end, lineOrArc, text));
             } else {
                 messages.AddError(lineOrArc, start, dxfFilePath, Messages.PathModel_LineTypeNotSupported_LineType, LineTypeName(layerLinetypes, lineOrArc));
             }
         }
-
 
         // 4b. Lines
         List<SubPathSegment.RawSegment> subPaths = new();
@@ -633,7 +635,17 @@ public class PathModel {
             s.ConnectModel(rawModel.Name, dxfFilePath, messages, nestingDepth);
         }
 
-        // F. Create PathModel
+        // F. Connect ZProbes to segments
+        foreach (var z in rawModel.ZProbes) {
+            foreach (var b in bottomSegments.OfType<ILeafSegmentWithTForZProbes>()) {
+                z.TryAttachTo(b);
+            }
+            if (!z.IsAttached) {
+                messages.AddError(z.Source, z.Position, dxfFilePath, Messages.PathModel_ZProbeNotAttached);
+            }   
+        }
+
+        // G. Create PathModel
         return new PathModel(rawModel.Name, pathParams, rawModel.Start.Value, rawModel.End.Value, segments, rawModel.ZProbes, dxfFilePath);
     }
 
@@ -682,7 +694,11 @@ public class PathModel {
     }
 
     internal IEnumerable<(ZProbe ZProbe, Vector2 TransformedCenter, double H_mm)> CollectZProbes(Transformation2 t, double h_mm) {
-        List<(ZProbe ZProbe, Vector2 TransformedCenter, double H_mm)> result = _zProbes.Select(z => (z, t.Transform(z.Center), h_mm)).ToList();
+        List<(ZProbe ZProbe, Vector2 TransformedCenter, double H_mm)> result = 
+            _zProbes
+            .Where(z => !z.Disabled)
+            .Select(z => (z, t.Transform(z.Probe), h_mm))
+            .ToList();
         foreach (var s in _segments.OfType<SubPathSegment>()) {
             result.AddRange(s.CollectZProbes(t, h_mm + s.H_mm));
         }

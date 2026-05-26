@@ -284,6 +284,9 @@ hat zugeordneten Text '{1}'</value>
   <data name="PathModel_UnreachedSegments" xml:space="preserve">
     <value>{0} Segmente (u.a. dieses hier) wurden nicht erreicht - evtl. fehlt N-Auszeichnung</value>
   </data>
+  <data name="PathModel_ZProbeNotAttached" xml:space="preserve">
+    <value>Z-Probe nicht mit Segment verbunden</value>
+  </data>
   <data name="PathSegment_CallDepthGt9_Path" xml:space="preserve">
     <value>Mehr als 9 verschachtelte Teilpfade bei Einbettung von {0}</value>
   </data>

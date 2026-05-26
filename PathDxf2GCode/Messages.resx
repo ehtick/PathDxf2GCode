@@ -285,6 +285,9 @@ has assigned text '{1}'</value>
   <data name="PathModel_UnreachedSegments" xml:space="preserve">
     <value>{0} segments (e.g. this one here) not reached - maybe N value is missing</value>
   </data>
+  <data name="PathModel_ZProbeNotAttached" xml:space="preserve">
+    <value>ZProbe not attached to segment</value>
+  </data>
   <data name="PathSegment_CallDepthGt9_Path" xml:space="preserve">
     <value>Nesting depth deeper than 9 levels at path {0}</value>
   </data>
