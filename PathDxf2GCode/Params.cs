@@ -428,18 +428,12 @@ public class SubpathParams : AbstractChildParams {
 }
 
 public class ZProbeParams : AbstractChildParams {
-    private SubpathParams? _subpathParams;
-
     public double? RawT_mm => GetDouble('T');
     public string? L => GetString('L');
     public override double Z_mmpmin => GetDouble('Z') ?? base.Z_mmpmin;
-    public double H_mm => GetDouble('H') ?? 0;
-
 
     public ZProbeParams(ParamsText text, ActualVariables superpathVariables, string errorContext, IParams pathParams,
         Action<string, string> onError) : base(text, superpathVariables, errorContext, pathParams, onError) {
         CheckKeysAndValues(text, "THLZ");
     }
-
-    public void SetSubpathParams(SubpathParams? subpathParams) => _subpathParams = subpathParams;
 }

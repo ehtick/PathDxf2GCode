@@ -2523,10 +2523,37 @@ M30
 %");
     }
 
+    private class TemporaryDir : IDisposable {
+        private readonly string _path;
+
+        public TemporaryDir(string fileName, Dictionary<string, string> replacements) {
+            _path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(_path);
+            string content = File.ReadAllText(fileName);
+
+            foreach (var kvp in replacements) {
+                content = content.Replace(kvp.Key, kvp.Value);
+            }
+
+            File.WriteAllText(Path.Combine(_path, fileName), content);
+        }
+        public void Dispose() {
+            try {
+                Directory.Delete(_path, recursive: true);
+            } catch {
+                // Ignore exceptions during cleanup
+            }
+        }
+
+        internal string Combine(string v) => Path.Combine(_path, v);
+    }
+
     [TestMethod]
-    public void TestMethod37_ZProbesOnSubpathArcWithHeight() {
-        Assert.AreEqual(0, Program.Main(["/f150", "/v500", "/s15", "/z50", "8999.37P.dxf"]));
-        Compare("8999.37P_Clean.gcode", $@"%
+    public void TestMethod37_ZProbesOnSubpathArc_noH_noH() {
+        using (var tempDir = new TemporaryDir("8999.37P.dxf",
+                new Dictionary<string, string> { { "##S", "T1" }, { "##Z", "" } })) {
+            Assert.AreEqual(0, Program.Main(["/f150", "/v500", "/s15", "/z50", "/d.", tempDir.Combine("8999.37P.dxf")]));
+            Compare(tempDir.Combine("8999.37P_Clean.gcode"), $@"%
 (PathDxf2GCode - HMMüller 2024-2026 V.{Program.VERSION})
 (8999.37P.dxf)
 F150
@@ -2538,53 +2565,51 @@ G00 X0.000 Y0.000
   (Model 8999.37P[8999.37P.dxf])
   (SweepAndDrillSafelyFromTo [0.000 0.000 5.000] [20.000 0.000 5.000] s=5.000 bt=False)
     (DrillOrPullZFromTo 5.000 5.000)
-G00 Z5.000(=5.000+0.461*[#51-3.000]+0.345*[#52-3.000]+0.194*[#53-3.000])
+G00 Z5.000(=5.000+0.461*[#51-1.000]+0.345*[#52-1.000]+0.194*[#53-1.000])
 G00 X20.000 Y0.000
   (START Subpath 8998.2P[8998.dxf] t=[ [120.000 170.000]=>[20.000 0.000] / [120.000 100.000]=>[20.000 70.000] ])
-  (SweepAndDrillSafelyFromTo [20.000 0.000 5.000] [20.000 0.000 1.800] s=7.000 bt=False)
-    (DrillOrPullZFromTo 5.000 1.800)
-G00 Z3.000(=3.000+0.606*[#51-3.000]+0.273*[#52-3.000]+0.121*[#53-3.000])
-G01 Z1.800(=1.800+0.606*[#51-3.000]+0.273*[#52-3.000]+0.121*[#53-3.000])
-  (MillLine s=[20.000 0.000] e=[0.000 20.000] fr=1.800 to=1.800 bt=False)
-G01 F150.000 X0.000 Y20.000 Z1.800(=1.800+0.606*[#51-3.000]+0.273*[#52-3.000]+0.121*[#53-3.000])
-  (SweepAndDrillSafelyFromTo [0.000 20.000 1.800] [0.000 20.000 1.800] s=7.000 bt=False)
-  (MillLine s=[0.000 20.000] e=[0.000 50.000] fr=1.800 to=1.800 bt=False)
-G01 F150.000 X0.000 Y50.000 Z1.800(=1.800+0.392*[#51-3.000]+0.391*[#52-3.000]+0.217*[#53-3.000])
-  (SweepAndDrillSafelyFromTo [0.000 50.000 1.800] [0.000 50.000 1.800] s=7.000 bt=False)
-  (MillLine s=[0.000 50.000] e=[20.000 70.000] fr=1.800 to=1.800 bt=False)
-G01 F150.000 X20.000 Y70.000 Z1.800(=1.800+0.368*[#53-3.000]+0.365*[#52-3.000]+0.268*[#51-3.000])
-  (SweepAndDrillSafelyFromTo [20.000 70.000 1.800] [20.000 70.000 1.700] s=7.000 bt=False)
-    (DrillOrPullZFromTo 1.800 1.700)
-G01 Z1.700(=1.700+0.687*[#53-3.000]+0.186*[#52-3.000]+0.127*[#51-3.000])
-  (MillLine s=[20.000 70.000] e=[0.000 50.000] fr=1.700 to=1.700 bt=False)
-G01 F150.000 X0.000 Y50.000 Z1.700(=1.700+0.687*[#53-3.000]+0.186*[#52-3.000]+0.127*[#51-3.000])
-  (SweepAndDrillSafelyFromTo [0.000 50.000 1.700] [0.000 50.000 1.700] s=7.000 bt=False)
-  (MillLine s=[0.000 50.000] e=[0.000 20.000] fr=1.700 to=1.700 bt=False)
-G01 F150.000 X0.000 Y20.000 Z1.700(=1.700+0.368*[#53-3.000]+0.365*[#52-3.000]+0.268*[#51-3.000])
-  (SweepAndDrillSafelyFromTo [0.000 20.000 1.700] [0.000 20.000 1.700] s=7.000 bt=False)
-  (MillLine s=[0.000 20.000] e=[20.000 0.000] fr=1.700 to=1.700 bt=False)
-G01 F150.000 X20.000 Y0.000 Z1.700(=1.700+0.392*[#51-3.000]+0.391*[#52-3.000]+0.217*[#53-3.000])
-  (SweepAndDrillSafelyFromTo [20.000 0.000 1.700] [20.000 70.000 7.000] s=7.000 bt=False)
-    (DrillOrPullZFromTo 1.700 7.000)
-G00 Z7.000(=7.000+0.606*[#51-3.000]+0.273*[#52-3.000]+0.121*[#53-3.000])
-G00 X20.000 Y70.000
+  (SweepAndDrillSafelyFromTo [20.000 0.000 5.000] [20.000 0.000 -0.200] s=5.000 bt=False)
+    (DrillOrPullZFromTo 5.000 -0.200)
+G00 Z1.000(=1.000+0.606*[#51-1.000]+0.273*[#52-1.000]+0.121*[#53-1.000])
+G01 Z-0.200(=-0.200+0.606*[#51-1.000]+0.273*[#52-1.000]+0.121*[#53-1.000])
+  (MillLine s=[20.000 0.000] e=[0.000 20.000] fr=-0.200 to=-0.200 bt=False)
+G01 F150.000 X0.000 Y20.000 Z-0.200(=-0.200+0.606*[#51-1.000]+0.273*[#52-1.000]+0.121*[#53-1.000])
+  (SweepAndDrillSafelyFromTo [0.000 20.000 -0.200] [0.000 20.000 -0.200] s=5.000 bt=False)
+  (MillLine s=[0.000 20.000] e=[0.000 50.000] fr=-0.200 to=-0.200 bt=False)
+G01 F150.000 X0.000 Y50.000 Z-0.200(=-0.200+0.392*[#51-1.000]+0.391*[#52-1.000]+0.217*[#53-1.000])
+  (SweepAndDrillSafelyFromTo [0.000 50.000 -0.200] [0.000 50.000 -0.200] s=5.000 bt=False)
+  (MillLine s=[0.000 50.000] e=[20.000 70.000] fr=-0.200 to=-0.200 bt=False)
+G01 F150.000 X20.000 Y70.000 Z-0.200(=-0.200+0.368*[#53-1.000]+0.365*[#52-1.000]+0.268*[#51-1.000])
+  (SweepAndDrillSafelyFromTo [20.000 70.000 -0.200] [20.000 70.000 -0.300] s=5.000 bt=False)
+    (DrillOrPullZFromTo -0.200 -0.300)
+G01 Z-0.300(=-0.300+0.687*[#53-1.000]+0.186*[#52-1.000]+0.127*[#51-1.000])
+  (MillLine s=[20.000 70.000] e=[0.000 50.000] fr=-0.300 to=-0.300 bt=False)
+G01 F150.000 X0.000 Y50.000 Z-0.300(=-0.300+0.687*[#53-1.000]+0.186*[#52-1.000]+0.127*[#51-1.000])
+  (SweepAndDrillSafelyFromTo [0.000 50.000 -0.300] [0.000 50.000 -0.300] s=5.000 bt=False)
+  (MillLine s=[0.000 50.000] e=[0.000 20.000] fr=-0.300 to=-0.300 bt=False)
+G01 F150.000 X0.000 Y20.000 Z-0.300(=-0.300+0.368*[#53-1.000]+0.365*[#52-1.000]+0.268*[#51-1.000])
+  (SweepAndDrillSafelyFromTo [0.000 20.000 -0.300] [0.000 20.000 -0.300] s=5.000 bt=False)
+  (MillLine s=[0.000 20.000] e=[20.000 0.000] fr=-0.300 to=-0.300 bt=False)
+G01 F150.000 X20.000 Y0.000 Z-0.300(=-0.300+0.392*[#51-1.000]+0.391*[#52-1.000]+0.217*[#53-1.000])
+  (SweepAndDrillSafelyFromTo [20.000 0.000 -0.300] [20.000 70.000 5.000] s=5.000 bt=False)
+    (DrillOrPullZFromTo -0.300 5.000)
+G00 Z5.000(=5.000+0.606*[#51-1.000]+0.273*[#52-1.000]+0.121*[#53-1.000])
+; G00 X20.000 Y70.000
   (END Subpath 8998.2P[8998.dxf] t=[ [120.000 170.000]=>[20.000 0.000] / [120.000 100.000]=>[20.000 70.000] ])
-  (SweepAndDrillSafelyFromTo [20.000 70.000 7.000] [0.000 70.000 5.000] s=5.000 bt=False)
-    (DrillOrPullZFromTo 7.000 5.000)
-G00 Z5.000(=5.000+0.687*[#53-3.000]+0.186*[#52-3.000]+0.127*[#51-3.000])
+  (SweepAndDrillSafelyFromTo [20.000 70.000 5.000] [0.000 70.000 5.000] s=5.000 bt=False)
 G00 X0.000 Y70.000
 G00 Z5.000
   (Fräslänge:     173 mm   ca.  2 min)
   (Bohrungen:       2 mm   ca.  1 min)
-  (Leerfahrten:   119 mm   ca.  1 min)
-  (Summe:         295 mm   ca.  2 min)
-  (Befehlszahl: 16)
+  (Leerfahrten:    49 mm   ca.  1 min)
+  (Summe:         225 mm   ca.  2 min)
+  (Befehlszahl: 14)
 M30
 %");
-        Compare("8999.37P_Z.txt", $@"([130.841 109.211]/T=3.000) #51=
-([131.394 129.426]/T=3.000) #52=
-([131.394 169.996]/T=3.000) #53=");
-        Compare("8999.37P_Probing.gcode", $@"%
+            Compare(tempDir.Combine("8999.37P_Z.txt"), $@"([130.841 109.211]/T=1.000) #51=
+([131.394 129.426]/T=1.000) #52=
+([131.394 169.996]/T=1.000) #53=");
+            Compare(tempDir.Combine("8999.37P_Probing.gcode"), $@"%
 (PathDxf2GCode - HMMüller 2024-2026 V.{Program.VERSION})
 (8999.37P.dxf)
 F150
@@ -2594,17 +2619,17 @@ T1
 G00 Z5.000
 G00 X0.000 Y0.000
 G00 X30.841 Y9.211
-G00 Z5.000
+G00 Z3.000
 G38.3 Z0 F50.000
 G04 P4
 G00 Z5.000
 G00 X31.394 Y29.426
-G00 Z5.000
+G00 Z3.000
 G38.3 Z0 F50.000
 G04 P4
 G00 Z5.000
 G00 X31.394 Y69.996
-G00 Z5.000
+G00 Z3.000
 G38.3 Z0 F50.000
 G04 P4
 G00 Z5.000
@@ -2612,6 +2637,31 @@ G00 X0.000 Y0.000
 G00 Z5.000
 M30
 %");
+        }
+    }
+
+    [TestMethod]
+    public void TestMethod37_ZProbesOnSubpathArc_H5_noH() {
+        using (var tempDir = new TemporaryDir("8999.37P.dxf",
+                new Dictionary<string, string> { { "##S", "T1 H5" }, { "##Z", "" } })) {
+            Assert.AreEqual(0, Program.Main(["/f150", "/v500", "/s15", "/z50", "/d.", tempDir.Combine("8999.37P.dxf")]));
+            Compare(tempDir.Combine("8999.37P_Z.txt"),
+$@"([130.841 109.211]/T=6.000) #51=
+([131.394 129.426]/T=6.000) #52=
+([131.394 169.996]/T=6.000) #53=");
+        }
+    }
+
+    [TestMethod]
+    public void TestMethod37_ZProbesOnSubpathArc_H5_T3() {
+        using (var tempDir = new TemporaryDir("8999.37P.dxf",
+                new Dictionary<string, string> { { "##S", "T1 H5" }, { "##Z", "T3" } })) {
+            Assert.AreEqual(0, Program.Main(["/f150", "/v500", "/s15", "/z50", "/d.", tempDir.Combine("8999.37P.dxf")]));
+            Compare(tempDir.Combine("8999.37P_Z.txt"),
+$@"([130.841 109.211]/T=6.000) #51=
+([131.394 129.426]/T=8.000) #52=
+([131.394 169.996]/T=6.000) #53=");
+        }
     }
 
     [TestMethod]

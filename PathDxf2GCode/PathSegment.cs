@@ -279,7 +279,8 @@ public interface ILeafSegment {
 
 public interface ILeafSegmentWithTForZProbes : ILeafSegment {
     EntityObject Source { get; }
-    double TH_mm { get; }
+    double T_mm { get; }
+    double H_mm { get; }
     bool Contains(Vector2 p);
     bool Disabled { get; }
 }
@@ -331,7 +332,8 @@ public class ChainSegment : ILeafSegmentWithTForZProbes {
     private IMillGeometry Geometry => Raw.Geometry;
     public double Order => Raw.Order;
 
-    public double TH_mm => _params!.T_mm;
+    public double T_mm => _params!.T_mm;
+    public double H_mm => 0;
     public bool Disabled => false;
 
     internal void CreateParams(ChainParams chainParams, ActualVariables superpathVariables, string dxfFileName, Action<string, string> onError) {
@@ -423,7 +425,8 @@ public abstract class MarkOrMillPathSegment<TRawSegment, TParams>
         where TRawSegment : MarkOrMillPathSegment<TRawSegment, TParams>.RawSegment
         where TParams : IParams {
     public abstract bool Contains(Vector2 p);
-    public abstract double TH_mm { get; }
+    public abstract double T_mm { get; }
+    public abstract double H_mm { get; }
     public bool Disabled => false;
 
     public new abstract class RawSegment : PathSegmentWithParamsText<TRawSegment, TParams>.RawSegment {
@@ -493,7 +496,8 @@ public class HelixSegment : MarkOrMillPathSegment<HelixSegment.RawSegment, Helix
     }
 
     public override bool Contains(Vector2 p) => Center.Near(p);
-    public override double TH_mm => _params!.T_mm;
+    public override double T_mm => _params!.T_mm;
+    public override double H_mm => 0;
 
     public override Vector3 EmitGCode(Vector3 currPos, double h_mm, Transformation3 t,
         double globalS_mm, List<GCode> gcodes, string dxfFileName, MessageHandlerForEntities messages) {
@@ -599,7 +603,8 @@ public class DrillSegment : MarkOrMillPathSegment<DrillSegment.RawSegment, Drill
     }
 
     public override bool Contains(Vector2 p) => Center.Near(p);
-    public override double TH_mm => _params!.T_mm;
+    public override double T_mm => _params!.T_mm;
+    public override double H_mm => 0;
 
     public override Vector3 EmitGCode(Vector3 currPos, double h_mm, Transformation3 t, double globalS_mm, List<GCode> gcodes, string dxfFileName, MessageHandlerForEntities messages) {
         Vector2 c = t.Transform(Center);
@@ -652,9 +657,8 @@ public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegmen
 
     private Options Options => Raw.Options;
 
-    public double H_mm => _params!.H_mm;
     public double T_mm => _params!.T_mm;
-    public double TH_mm => T_mm + H_mm;
+    public double H_mm => _params!.H_mm;
     public bool Disabled => Raw.Disabled;
 
     public string TargetName => _params!.GetString('>') ?? "<missing>";
@@ -738,6 +742,5 @@ public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegmen
 
     public bool Contains(Vector2 p) 
         => Raw.Source is Arc a ? GeometryHelpers.PointInArc(p, a.Center.AsVector2(), a.Radius, a.StartAngle, a.EndAngle)
-         : Raw.Source is Line ? MathHelper.PointInSegment(p, Raw.Start, Raw.End) == 0 
-         : false;
+         : /*Line*/ MathHelper.PointInSegment(p, Raw.Start, Raw.End) == 0;
 }

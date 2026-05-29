@@ -214,8 +214,7 @@ public class PathModel {
         bool IsSpecialCircle(Circle c) => IsLineTypePhantom(c) || IsLineTypeIgnore(c) || IsLineTypeDashdot(c);
         bool IsStartMarker(Circle c) => IsLineTypePhantom(c) && c.Radius.Near(0.5);
         bool IsEndMarker(Circle c) => IsLineTypePhantom(c) && c.Radius.Near(1);
-        bool IsIgnoredZProbe(Circle c) => IsLineTypeIgnore(c) && c.Radius.Near(3);
-
+     
         // Algorithm:
         // 1. Collect all objects on path layers - circles, lines, arcs, and texts
         // 2. Connect texts with objects -> Dictionary<EntityObject, string>
@@ -289,8 +288,6 @@ public class PathModel {
                     } else {
                         rawModel.End = center;
                     }
-                } else if (IsIgnoredZProbe(circle)) { // ignored ZProbe
-                    // ignore it
                 } else {
                     messages.AddError(circle, center, dxfFilePath, Messages.PathModel_NotSpecialCircle_Diameter, (2 * circle.Radius).F3());
                 }

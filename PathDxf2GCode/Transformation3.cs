@@ -9,9 +9,11 @@ public class ZProbe {
     private readonly Vector2 _start, _end;
 
     private Vector2? _probe;
-    private double _segmentTH_mm;
     private ZProbeParams? _params;
     private string? _name;
+
+    private double _segmentT_mm;
+    private double _segmentH_mm;
 
     public EntityObject Source { get; }
     public Vector2 Position => _start;
@@ -27,18 +29,23 @@ public class ZProbe {
     }
 
     public void TryAttachTo(ILeafSegmentWithTForZProbes segment) {
+        void SetValues(ILeafSegmentWithTForZProbes segment) {
+            _segmentT_mm = segment.T_mm;
+            _segmentH_mm = segment.H_mm;
+            Disabled = segment.Disabled;
+        }
+
         if (segment.Contains(_start)) {
             _probe = _end;
-            _segmentTH_mm = segment.TH_mm;
-            Disabled = segment.Disabled;
+            SetValues(segment);
         } else if (segment.Contains(_end)) {
             _probe = _start;
-            _segmentTH_mm = segment.TH_mm;
-            Disabled = segment.Disabled;
+            SetValues(segment);
         } else {
             // ignore
         }
     }
+
 
     public bool IsAttached => _probe != null;
 
@@ -46,7 +53,7 @@ public class ZProbe {
         _params = new ZProbeParams(ParamsText, superpathVariables, MessageHandlerForEntities.Context(Source, Position, dxfFileName), pathParams, onError);
     }
 
-    public double TH_mm(double h_mm) => (_params!.RawT_mm + _params!.H_mm ?? _segmentTH_mm) + _params.H_mm + h_mm;
+    public double TH_mm(double h_mm) => (_params!.RawT_mm ?? _segmentT_mm) + _segmentH_mm + h_mm;
     public string? L => _params!.L;
 
     public string Name => _name ?? throw new NullReferenceException("SetName was not called");
