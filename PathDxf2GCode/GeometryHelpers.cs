@@ -27,9 +27,6 @@ public static class GeometryHelpers {
     public static bool AbsNear(this double d, double e, double absoluteEps)
         => Math.Abs(d - e) <= absoluteEps;
 
-    public static bool Between(this double a, double b, double c)
-        => a >= b && a <= c;
-
     public static bool Ge(this double d, double e)
         => d >= e || d.Near(e);
 
@@ -41,6 +38,9 @@ public static class GeometryHelpers {
 
     public static bool Lt(this double d, double e)
         => e.Gt(d);
+
+    public static bool Between(this double a, double b, double c)
+        => a.Ge(b) && a.Le(c);
 
     #endregion
 

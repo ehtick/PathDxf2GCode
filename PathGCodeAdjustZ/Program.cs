@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using static System.FormattableString;
 
 public class Program {
-    private const string VERSION = "2025-09-02";
+    private const string VERSION = "2026-05-29";
 
     private static int Main(string[] args) {
         MessageHandler messages = new(Console.Error);
@@ -44,8 +44,8 @@ public class Program {
             int lineNo = 1;
             for (string? line = null; (line = sr.ReadLine()) != null; lineNo++) {
                 // Line example:
-                // ([77.038 191.859]/L:ZA/T=5.000) #51=5.432
-                // <        0             > <  1  > <> < 3 >
+                // ([77.038 191.859]/L:ZA/TH=5.000) #51=5.432
+                // <        0              > <  1  > <> < 3 >
                 string[] fields = line.Split([ '#', '=' ], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 if (fields.Length == 0) {
                     // ignore - Leerzeile

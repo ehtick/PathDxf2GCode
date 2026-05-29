@@ -434,6 +434,6 @@ public class ZProbeParams : AbstractChildParams {
 
     public ZProbeParams(ParamsText text, ActualVariables superpathVariables, string errorContext, IParams pathParams,
         Action<string, string> onError) : base(text, superpathVariables, errorContext, pathParams, onError) {
-        CheckKeysAndValues(text, "THLZ");
+        CheckKeysAndValues(text, "TLZ");
     }
 }
