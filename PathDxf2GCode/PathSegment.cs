@@ -717,7 +717,7 @@ public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegmen
             if (!_params.T_mm.Near(_targetModel.Params.T_mm)) {
                 messages.AddError(dxfFileName, Messages.PathSegment_DifferingT_Caller_Path_Called, _params.T_mm, _targetModel.Name, _targetModel.Params.T_mm);
             }
-            _targetModel.Params.FormalVariables.CheckActualVariables(_params.ActualVariables, msg => messages.AddError(errorContext, msg));
+            _targetModel.Params.FormalVariables.CheckAgainstActualVariables(_params.ActualVariables, msg => messages.AddError(errorContext, msg));
         }
     }
 
@@ -736,8 +736,12 @@ public class SubPathSegment : PathSegmentWithParamsText<SubPathSegment.RawSegmen
     }
 
     public IEnumerable<(ZProbe ZProbe, Vector2 Center, double H_mm)> CollectZProbes(Transformation2 t, double h_mm) {
-        Transformation2 compound = t.Transform(new Transformation2(_targetModel!.Start, _targetModel.End, Start, End));
-        return _targetModel?.CollectZProbes(compound, h_mm) ?? Enumerable.Empty<(ZProbe, Vector2, double)>();
+        if (_targetModel != null) {
+            Transformation2 compound = t.Transform(new Transformation2(_targetModel.Start, _targetModel.End, Start, End));
+            return _targetModel.CollectZProbes(compound, h_mm) ?? Enumerable.Empty<(ZProbe, Vector2, double)>();
+        } else {
+            return Enumerable.Empty<(ZProbe, Vector2, double)>();
+        }
     }
 
     public bool Contains(Vector2 p) 

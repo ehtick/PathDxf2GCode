@@ -63,9 +63,11 @@ public class PathModel {
             if (!_models.ContainsKey((name, variables))) {
                 (RawPathModel? rawModel, string? dxfFilePath) = LoadRawModel(name, Path.GetDirectoryName(Path.GetFullPath(currentDxfFile)), options, overlayTextForErrors, messages, out searchedFiles);
                 if (rawModel != null) { // errors when rawModel==null were already registered
-                    PathModel? m = CreatePathModel(name, rawModel, defaultSorNullForTplusO_mm: defaultSorNullForTplusO_mm, variables, dxfFilePath!, options, messages, nestingDepth);
-                    if (m != null) { // errors when m==null were already registered
-                        _models.Add((name, variables), m);
+                    if (FormalVariables.CheckAgainstActualVariables(rawModel.ParamsText!.VariableStrings, variables, msg => messages.AddError(overlayTextForErrors, msg))) {
+                        PathModel? m = CreatePathModel(name, rawModel, defaultSorNullForTplusO_mm: defaultSorNullForTplusO_mm, variables, dxfFilePath!, options, messages, nestingDepth);
+                        if (m != null) { // errors when m==null were already registered
+                            _models.Add((name, variables), m);
+                        }
                     }
                 }
             }
@@ -247,7 +249,7 @@ public class PathModel {
             } else {
                 // Reverse encodings of special characters by BeckerCAD which I do not need
                 texts[overlappingObject] = new ParamsText(Text.Replace("%%c", "_D").Replace("%%d", "_G").Replace("%%p", "_+"),
-                                                          TextObject, Position, TextCircle!.Center, TextCircle.Radius);
+                                               TextObject, Position, dxfFilePath, TextCircle!.Center, TextCircle.Radius);
             }
         }
 

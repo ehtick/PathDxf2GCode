@@ -100,14 +100,21 @@ public class FormalVariables : Variables {
         }
     }
 
-    public void CheckActualVariables(ActualVariables values, Action<string> onError) {
-        char[] missingValues = _assignments.Keys.Except(values.Assignments.Keys).ToArray();
+    public static bool CheckAgainstActualVariables(IReadOnlyDictionary<char, string> assignments, ActualVariables values, Action<string> onError) {
+        bool ok = true;
+        char[] missingValues = assignments.Keys.Except(values.Assignments.Keys).ToArray();
         if (missingValues.Any()) {
-            onError(string.Format(Messages.Variables_MissingValues_Variables, new string(missingValues)));
+            onError(string.Format(Messages.Variables_MissingValues_Variables, string.Join(",", missingValues)));
+            ok = false;
         }
+        return ok;
+    }
+
+    public void CheckAgainstActualVariables(ActualVariables values, Action<string> onError) {
+        CheckAgainstActualVariables(_assignments, values, onError);
         char[] missingDefinitions = values.Assignments.Keys.Except(_assignments.Keys).ToArray();
         if (missingDefinitions.Any()) {
-            onError(string.Format(Messages.Variables_MissingDefinitions_Variables, new string(missingDefinitions)));
+            onError(string.Format(Messages.Variables_MissingDefinitions_Variables, string.Join(",", missingDefinitions)));
         }
         foreach (var k in _assignments.Keys.Intersect(values.Assignments.Keys)) {
             try {

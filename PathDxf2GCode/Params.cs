@@ -18,8 +18,8 @@ public class ParamsText {
 
     public static readonly ParamsText EMPTY = new("", "", null, Vector2.Zero, Vector2.Zero, 0);
 
-    public ParamsText(string text, EntityObject? source, Vector2? position, Vector2 textCenter, double textRadius)
-        : this(text, source?.CodeName + " @ " + position?.F3(), source?.Layer.Name, position ?? Vector2.Zero, textCenter, textRadius) {
+    public ParamsText(string text, EntityObject source, Vector2 position, string dxfFileName, Vector2 textCenter, double textRadius)
+        : this(text, MessageHandlerForEntities.Context(source, position, dxfFileName), source?.Layer.Name, position, textCenter, textRadius) {
     }
 
     private ParamsText(string text, string context, string? layerName, Vector2 position, Vector2 textCenter, double textRadius)
